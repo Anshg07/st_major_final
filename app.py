@@ -1,172 +1,179 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-import base64
-
-def add_bg_from_local(image_file):
-    with open(image_file, "rb") as image:
-        encoded_image = base64.b64encode(image.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url(data:image/{"jpg"};base64,{encoded_image});
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            font-family: 'Arial', sans-serif;
-        }}
-        .glassmorphism-block {{
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            backdrop-filter: blur(10px);
-        }}
-        .title {{
-            font-size: 2rem;
-            font-weight: bold;
-            text-align: center;
-            padding: 10px;
-        }}
-        .footer {{
-            text-align: center;
-            padding: 10px;
-            font-size: 0.9rem;
-            color: #ccc;
-        }}
-        .auth-container {{
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-# add_bg_from_local('green_trees.jpg')
 
 # Authentication
-st.sidebar.title("Authentication")
-username = st.sidebar.text_input("Username")
-password = st.sidebar.text_input("Password", type="password")
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
+def authenticate():
+        # Authentication
+    st.sidebar.title("🔒 Authentication")
 
-if not st.session_state["authenticated"]:
-    if st.sidebar.button("Login"):
-        if username == "admin" and password == "password":  # Replace with proper authentication
-            st.session_state["authenticated"] = True
+    if not st.session_state.get("authenticated"):
+        username = st.sidebar.text_input("Username", placeholder="Enter your username")
+        password = st.sidebar.text_input("Password", type="password", placeholder="••••••••")
+        
+        if st.sidebar.button("Login", use_container_width=True):
+            if username == "admin" and password == "password":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.sidebar.error("Invalid credentials")
+    else:
+        if st.sidebar.button("Logout", use_container_width=True):
+            st.session_state.authenticated = False
             st.rerun()
-        else:
-            st.sidebar.error("Invalid credentials")
-else:
-    if st.sidebar.button("Logout"):
-        st.session_state["authenticated"] = False
-        st.rerun()
 
-if not st.session_state["authenticated"]:
-    st.warning("Please login to continue.")
-    st.stop()
+    if not st.session_state.get("authenticated"):
+        st.warning("Please login from the sidebar to continue")
+        st.stop()
 
-st.markdown("<h1 class='title'>AI-Powered Customer Care Email Generator</h1>", unsafe_allow_html=True)
+authenticate()
 
-# Pagination setup
-page = st.sidebar.radio("Navigation", ["Home", "Generate Response", "Settings"])
+# App Title
+st.title("📧 AI-Powered Customer Care Assistant")
+st.caption("Streamline your customer support with AI-generated responses")
 
+# Session State Initialization
 if "company_details" not in st.session_state:
-    st.session_state["company_details"] = {
-        "TechCorp": "A leading technology company providing AI solutions.",
-        "MediCare": "A healthcare organization focused on patient well-being.",
-        "EduLearn": "An ed-tech company delivering quality online education."
+    st.session_state.company_details = {
+        "TechCorp": "Leading technology solutions provider",
+        "MediCare": "Healthcare services organization",
+        "EduLearn": "Online education platform"
     }
 
 if "api_key" not in st.session_state:
-    st.session_state["api_key"] = ""
+    st.session_state.api_key = ""
 
+# Navigation
+page = st.sidebar.radio("Navigate to", ["🏠 Dashboard", "✉️ Generate Response", "⚙️ Configuration"])
 
-if page == "Home":
-    st.write("## Welcome to the AI-Powered Customer Care Email Generator!")
-    st.write("This project aims to automate professional email responses using AI.")
-    st.write("### Strengths of this project:")
-    st.write("- Automated customer support responses.")
-    st.write("- Customizable for different companies.")
-    st.write("- Secure and user-friendly.")
-    st.write("- AI-powered insights for improved engagement.")
-
-elif page == "Generate Response":
-    selected_company = st.selectbox("Select your Company", list(st.session_state["company_details"].keys()))
-    company_name = selected_company
-    company_description = st.session_state["company_details"][selected_company]
-    company_tone = st.selectbox("Select the tone of your emails", ["Professional", "Friendly", "Casual", "Formal"])
-    customer_query = st.text_area("Enter customer query")
-
-    if st.button("Generate Response"):
-        if st.session_state["api_key"] and customer_query:
-            os.environ["API_KEY"] = st.session_state["api_key"]
-            genai.configure(api_key=os.environ["API_KEY"])
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            combined_query = f"""
-            You are generating customer care emails for {company_name}, a company that {company_description}. 
-            Your task is to respond to customer queries in a {company_tone.lower()} manner while maintaining clarity and helpfulness.
-            
-            Please follow these guidelines:
-            - If the customer query is related to {company_name}'s services, provide a detailed and informative response.
-            - If the query falls outside the scope of {company_name}, politely inform the customer and redirect them if necessary.
-            - Keep responses well-structured, concise, and relevant.
-            - Maintain a {company_tone.lower()} tone throughout the response.
-            
-            Here is a new customer query:
-
-            {customer_query}
-
-            Please generate an appropriate customer care email response following the style and structure of professional customer support communication.
-            Include proper markdown formatting in the response.
-            """
-            
-            try:
-                response = model.generate_content(combined_query)
-                generated_text = response.candidates[0].content.parts[0].text
-                st.markdown(f"<div class='glassmorphism-block'>{generated_text}</div>", unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-        else:
-            st.error("Please enter a valid customer query. Ensure API Key is set in the settings.")
-
-
-elif page == "Settings":
-    st.write("## Manage API Key")
-    with st.expander("API Key Management"):
-        st.session_state["api_key"] = st.text_input("Enter your Google API Key", type="password", value=st.session_state["api_key"])
-        if st.button("Save API Key"):
-            st.success("API Key saved successfully!")
-            st.rerun()
+# Dashboard Page
+if page == "🏠 Dashboard":
+    st.header("Welcome to Your Customer Care Hub")
+    st.write("""
+    **Key Features:**
+    - Instant AI-generated email responses
+    - Multi-company profile support
+    - Customizable response tones
+    - Secure API integration
+    """)
     
-    st.write("### Manage Companies")
-    for company, desc in list(st.session_state["company_details"].items()):
-        with st.expander(f"{company}"):
-            new_desc = st.text_area(f"Update description for {company}", value=desc)
-            col1, col2 = st.columns(2)
-            if col1.button(f"Update {company}"):
-                st.session_state["company_details"][company] = new_desc
-                st.success(f"{company} updated successfully!")
-                st.rerun()
-            if col2.button(f"Delete {company}"):
-                del st.session_state["company_details"][company]
-                st.success(f"{company} deleted successfully!")
-                st.rerun()
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Your Companies")
+        for company in st.session_state.company_details:
+            st.markdown(f"- **{company}**: {st.session_state.company_details[company]}")
     
-    new_company_name = st.text_input("New Company Name")
-    new_company_desc = st.text_area("New Company Description")
-    if st.button("Add Company"):
-        if new_company_name and new_company_desc:
-            st.session_state["company_details"][new_company_name] = new_company_desc
-            st.success(f"Company {new_company_name} added successfully!")
-            st.rerun()
+    with col2:
+        st.subheader("Quick Actions")
+        st.button("View API Documentation", disabled=True)
+        st.button("View Usage Analytics", disabled=True)
+
+# Generate Response Page
+elif page == "✉️ Generate Response":
+    st.header("Create AI-Generated Response")
+    
+    with st.form("response_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            company = st.selectbox(
+                "Select Company",
+                options=list(st.session_state.company_details.keys()),
+                help="Select the company profile to use"
+            )
+        with col2:
+            tone = st.selectbox(
+                "Response Tone",
+                options=["Professional", "Friendly", "Compassionate", "Formal"],
+                index=0,
+                help="Select the desired communication tone"
+            )
+        
+        query = st.text_area(
+            "Customer Query",
+            height=150,
+            placeholder="Paste the customer's message here...",
+            help="Enter the customer's original query"
+        )
+        
+        if st.form_submit_button("Generate Response", use_container_width=True):
+            if st.session_state.api_key and query:
+                try:
+                    genai.configure(api_key=st.session_state.api_key)
+                    model = genai.GenerativeModel("gemini-pro")
+                    prompt = f"""
+                    Generate a {tone.lower()} email response for {company} ({st.session_state.company_details[company]}).
+                    Customer query: {query}
+                    """
+                    with st.spinner("Crafting professional response..."):
+                        response = model.generate_content(prompt)
+                        st.divider()
+                        st.markdown("**AI-Generated Response**")
+                        st.markdown(response.text)
+                except Exception as e:
+                    st.error(f"Generation error: {str(e)}")
+            else:
+                st.error("Please configure API key and enter query")
+
+# Configuration Page
+elif page == "⚙️ Configuration":
+    st.header("Configuration Settings")
+    
+    with st.expander("🔑 API Key Management", expanded=True):
+        st.session_state.api_key = st.text_input(
+            "Google API Key",
+            type="password",
+            value=st.session_state.api_key,
+            help="Enter your Google Generative AI API key"
+        )
+        if st.button("Save API Key", help="Secure storage in session"):
+            st.success("API key saved for current session")
+    
+    with st.expander("🏢 Company Profiles"):
+        # Section 1: Existing Companies
+        st.subheader("📋 Existing Company Profiles")
+        st.write("Manage your current company configurations")
+        
+        if not st.session_state.company_details:
+            st.info("No companies added yet. Use the section below to add new ones.")
         else:
-            st.error("Please enter both company name and description.")
+            for company in list(st.session_state.company_details.keys()):
+                with st.container(border=True):
+                    cols = st.columns([0.7, 0.3])
+                    with cols[0]:
+                        new_desc = st.text_input(
+                            f"{company} Description",
+                            value=st.session_state.company_details[company],
+                            key=f"desc_{company}"
+                        )
+                    with cols[1]:
+                        if st.button(f"🔄 Update {company}", key=f"update_{company}"):
+                            st.session_state.company_details[company] = new_desc
+                            st.rerun()
+                        if st.button(f"❌ Delete {company}", key=f"delete_{company}"):
+                            del st.session_state.company_details[company]
+                            st.rerun()
+        
+        st.divider()
+        
+        # Section 2: Add New Company
+        st.subheader("✨ Add New Company")
+        st.write("Create new company profiles for email generation")
+        
+        with st.form("new_company_form"):
+            new_name = st.text_input("Company Name", placeholder="Enter new company name")
+            new_desc = st.text_input("Company Description", placeholder="Enter company description")
+            
+            if st.form_submit_button("➕ Add Company", use_container_width=True):
+                if new_name and new_desc:
+                    if new_name in st.session_state.company_details:
+                        st.error("Company already exists!")
+                    else:
+                        st.session_state.company_details[new_name] = new_desc
+                        st.rerun()
+                else:
+                    st.error("Both fields are required!")
 
-
-
-st.markdown(f"<div class='footer' style='text-align: center;'>Powered by AI CRM | {st.session_state.get('company_name', 'MAJOR PROJECT - ANSH,PRANEET,HIMANGI')}</div>", unsafe_allow_html=True)
+# Footer
+st.divider()
+st.caption("© 2024 Customer Care AI - Developed by Ansh, Praneet & Himangi")
