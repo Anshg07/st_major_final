@@ -100,7 +100,7 @@ elif page == "✉️ Generate Response":
             if st.session_state.api_key and query:
                 try:
                     genai.configure(api_key=st.session_state.api_key)
-                    model = genai.GenerativeModel("gemini-pro")
+                    model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
                     prompt = f"""
                     Generate a {tone.lower()} email response for {company} ({st.session_state.company_details[company]}).
                     Customer query: {query}
@@ -176,4 +176,4 @@ elif page == "⚙️ Configuration":
 
 # Footer
 st.divider()
-st.caption("© 2024 Customer Care AI - Developed by Ansh, Praneet & Himangi")
+st.caption("© 2025 Customer Care AI - Developed by Ansh")
