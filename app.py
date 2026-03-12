@@ -176,4 +176,4 @@ elif page == "⚙️ Configuration":
 
 # Footer
 st.divider()
-st.caption("© 2025 Customer Care AI - Developed by Ansh")
+st.caption("© 2026 Customer Care AI - Developed by Ansh")
